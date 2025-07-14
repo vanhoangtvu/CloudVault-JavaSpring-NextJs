@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: cloudvault-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: CloudVault
+      MYSQL_USER: cloudvault
+      MYSQL_PASSWORD: cloudvault123
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - cloudvault-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  cloudvault-app:
+    build: .
+    container_name: cloudvault-api
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/CloudVault?useSSL=false&serverTimezone=UTC&createDatabaseIfNotExist=true
+      SPRING_DATASOURCE_USERNAME: cloudvault
+      SPRING_DATASOURCE_PASSWORD: cloudvault123
+      JWT_SECRET: mySecretKeyForCloudVaultDockerApplicationThatShouldBeLongEnoughForSecurity
+      JWT_EXPIRATION: 18000
+      GOOGLE_DRIVE_CREDENTIALS_PATH: /app/credentials.json
+    ports:
+      - "8080:8080"
+    volumes:
+      - app_logs:/app/logs
+      - ./src/main/resources/credentials.json:/app/credentials.json:ro
+    networks:
+      - cloudvault-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+volumes:
+  mysql_data:
+    driver: local
+  app_logs:
+    driver: local
+
+networks:
+  cloudvault-network:
+    driver: bridge

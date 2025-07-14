@@ -1,0 +1,28 @@
+# CloudVault Docker Commands
+
+# Build và khởi động tất cả services
+docker-compose up --build -d
+
+# Xem logs
+docker-compose logs -f cloudvault-app
+
+# Xem logs MySQL
+docker-compose logs -f mysql
+
+# Restart application
+docker-compose restart cloudvault-app
+
+# Stop tất cả services
+docker-compose down
+
+# Stop và xóa volumes (careful - this deletes database data!)
+docker-compose down -v
+
+# Xem trạng thái containers
+docker-compose ps
+
+# Access application container shell
+docker exec -it cloudvault-api sh
+
+# Access MySQL container
+docker exec -it cloudvault-mysql mysql -u cloudvault -p CloudVault
